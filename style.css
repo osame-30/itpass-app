@@ -61,6 +61,7 @@ h3 { font-size: 16px; margin: 0 0 6px; }
 .tw table, .html table { border-collapse: collapse; font-size: 14px; }
 .tw td, .tw th, .html td, .html th { border: 1px solid var(--line); padding: 4px 8px; }
 .tw th, .html th { background: var(--bg); font-weight: 600; }
+u.dash { text-decoration-style: dashed; }     /* 外部キー */
 .html td.c { text-align: center; }
 .html td.r { text-align: right; }
 .html .fig { display: inline-block; padding: 6px; }

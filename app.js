@@ -11,7 +11,7 @@ var canSave = true;
 
 function $(sel) { return document.querySelector(sel); }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
-function rich(s) { return esc(s).replace(/__(.+?)__/g, '<u>$1</u>'); }      // __主キー__ のように書いた所に下線
+function rich(s) { return esc(s).replace(/__(.+?)__/g, '<u>$1</u>').replace(/~~(.+?)~~/g, '<u class="dash">$1</u>'); }   // __主キー__ は下線、~~外部キー~~ は破線の下線
 function today() { return ymd(new Date()); }
 function allIds() { return DB.questions.map(q => q.id); }
 function remaining() { return remainingCount(st, DB.main.concat(DB.extra)); }
