@@ -32,8 +32,8 @@ function save() {
 function index(data) {
   const qs = data.questions;
   const ids = kind => qs.filter(q => q.set === kind).map(q => q.id);
-  return { version: data.version, questions: qs, byId: Object.fromEntries(qs.map(q => [q.id, q])),
-           main: ids('300'), extra: ids('ai'), r08: ids('r08') };
+  return { version: data.version, questions: qs, byId: Object.fromEntries(qs.map(q => [q.id, q])),   // 1回だけ出た論点も300問と同じ扱い
+           main: ids('300').concat(ids('once')), once: ids('once'), extra: ids('ai'), r08: ids('r08') };
 }
 
 function toast(msg) {
@@ -56,6 +56,7 @@ function home() {
   const pct = k => s[k].n ? Math.round(100 * s[k].ok / s[k].n) + '<small>%</small>' : '—';
   const wrongN = pickWrong(st, allIds(), Infinity).length;
   const aiNew = DB.extra.filter(id => status(st, id) === 'new').length;
+  const onceNew = DB.once.filter(id => status(st, id) === 'new').length;
   $('#v').innerHTML = (t ? `
     <section class="card quota${day.cleared ? ' done' : ''}">
       <div class="qhead"><h2>今日のノルマ</h2>${day.cleared ? '<span class="clear">クリア</span>' : ''}</div>
@@ -85,6 +86,7 @@ function home() {
         <button class="btn" data-act="field" data-arg="T">テクノロジ</button>
       </div>
       <button data-act="wrong">間違えた問題<span>${wrongN}</span></button>
+      <button data-act="once">過去に1回だけ出た論点<span>未回答 ${onceNew}</span></button>
       <button data-act="ai">AI作成問題<span>未回答 ${aiNew}</span></button>
       <button data-act="r08">令和8年度（模試用）<span>${st.r08ok ? `続き 問${Math.min(st.r08, 100)}` : '鍵'}</span></button>
     </nav>
@@ -221,6 +223,8 @@ function about() {
       <h2>問題の出典</h2>
       <p>過去問題は、IPA（独立行政法人 情報処理推進機構）が公開している ITパスポート試験の公開問題です。各問題に出典を出しています。IPA は、出典を書けば許諾や使用料なしで過去問題を問題集に使えるとしています。</p>
       <p>問題文は、冊子の画像を文字に起こしたものです。2つのAIで点検していますが、誤りが残っているかもしれません。おかしいと思ったら「原本を見る」で冊子を確かめてください。文字に起こす前の問題は、冊子の画像のまま出しています。</p>
+      <h2>おまかせに出る問題</h2>
+      <p>合格特化300問（過去9回分で2回以上出た論点）と、過去に1回だけ出た論点の99問から先に出し、解き終えたら AI作成問題を出します。令和8年度は模試用に取ってあるので出しません。</p>
       <h2>解説とAI作成問題</h2>
       <p>解説と「AI作成問題」は AI（Claude）が書いたもので、IPA の過去問題ではありません。誤りがあるかもしれません。</p>
       <h2>今日のノルマ</h2>
@@ -239,6 +243,7 @@ var ACTIONS = {
   fields: () => { $('#fields').hidden = !$('#fields').hidden; },
   field: f => startRound(pickRound(st, DB.main.filter(inField(f)), DB.extra.filter(inField(f)), Math.random), FIELD_NAME[f], 'field', f),
   wrong: () => startRound(pickWrong(st, allIds()), '間違えた問題', 'wrong'),
+  once: () => startRound(pickRound(st, DB.once, [], Math.random), '過去に1回だけ出た論点', 'once'),
   ai: () => startRound(pickRound(st, [], DB.extra, Math.random), 'AI作成問題', 'ai'),
   r08: () => (st.r08ok ? startR08() : r08Gate()),
   r08yes: () => { st.r08ok = true; save(); startR08(); },
