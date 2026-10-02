@@ -1,5 +1,5 @@
 // オフライン用。make_app.py が VERSION を書き換え、版が変わると precache.json の全ファイルを取り直す。
-const VERSION = '716c4a0f1486';
+const VERSION = '3b18ed211ea3';
 const CACHE = 'itpass-' + VERSION;
 
 self.addEventListener('install', e => {

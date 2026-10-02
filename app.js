@@ -11,6 +11,7 @@ var canSave = true;
 
 function $(sel) { return document.querySelector(sel); }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
+function rich(s) { return esc(s).replace(/__(.+?)__/g, '<u>$1</u>'); }      // __主キー__ のように書いた所に下線
 function today() { return ymd(new Date()); }
 function allIds() { return DB.questions.map(q => q.id); }
 function remaining() { return remainingCount(st, DB.main.concat(DB.extra)); }
@@ -132,10 +133,10 @@ function r08Gate() {
 
 function block(b) {
   switch (b.t) {
-    case 'p': return `<p>${esc(b.v).replace(/\n/g, '<br>')}</p>`;
-    case 'list': return `<ul class="items">${b.v.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+    case 'p': return `<p>${rich(b.v).replace(/\n/g, '<br>')}</p>`;
+    case 'list': return `<ul class="items">${b.v.map(x => `<li>${rich(x)}</li>`).join('')}</ul>`;
     case 'table': return `<div class="tw"><table>${b.v.map((r, i) =>
-      `<tr>${r.map(c => i === 0 && b.head ? `<th>${esc(c)}</th>` : `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table></div>`;
+      `<tr>${r.map(c => i === 0 && b.head ? `<th>${rich(c)}</th>` : `<td>${rich(c)}</td>`).join('')}</tr>`).join('')}</table></div>`;
     case 'img': return `<img class="fig" src="${esc(b.v)}" alt="図">`;
     case 'code': return `<pre>${esc(b.v)}</pre>`;
     case 'html': return `<div class="html">${b.v}</div>`;
@@ -146,7 +147,7 @@ function block(b) {
 function showQ() {
   const q = DB.byId[round.ids[round.i]];
   const text = q.body !== null;
-  const layout = !q.choices ? 'grid4' : q.choices.every(c => c.length <= 14) ? 'grid2' : 'list';
+  const layout = !q.choices ? 'grid4' : q.choices.every(c => c.replace(/__/g, '').length <= 14) ? 'grid2' : 'list';
   $('#v').innerHTML = `
     <div class="qbar"><button class="x" data-act="home" aria-label="やめる">×</button>
       <span class="pos">${round.i + 1} / ${round.ids.length}</span><span class="src">${esc(q.source)}</span></div>
@@ -155,7 +156,7 @@ function showQ() {
       ${text && q.original ? `<details class="origbox"><summary>原本を見る</summary><img src="${esc(q.original)}" loading="lazy" alt="冊子の画像"></details>` : ''}
     </article>
     <div class="choices ${layout}">${LETTERS.map((L, i) =>
-      `<button class="ch" data-act="choose" data-arg="${i}"><b>${L}</b>${q.choices ? `<span>${esc(q.choices[i])}</span>` : ''}</button>`).join('')}</div>
+      `<button class="ch" data-act="choose" data-arg="${i}"><b>${L}</b>${q.choices ? `<span>${rich(q.choices[i])}</span>` : ''}</button>`).join('')}</div>
     <div id="after"></div>`;
   window.scrollTo(0, 0);
 }
