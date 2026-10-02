@@ -12,6 +12,7 @@
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }        /* display を指定した要素でも hidden を効かせる */
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--text);
   font: 16px/1.7 system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif; }
@@ -50,6 +51,7 @@ h3 { font-size: 16px; margin: 0 0 6px; }
 .qbar .src { margin-left: auto; text-align: right; }
 .x { border: 0; background: none; font-size: 26px; line-height: 1; padding: 2px 8px 6px; color: var(--sub); }
 .q { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin: 0 0 12px; }
+.q.pic { padding: 4px; }                     /* 冊子画像の問題は字を少しでも大きく */
 .q p { margin: 0 0 10px; }
 .q .items { list-style: none; margin: 0 0 10px; padding: 0; }
 .q .items li { margin: 0 0 6px; }

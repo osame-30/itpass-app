@@ -150,7 +150,7 @@ function showQ() {
   $('#v').innerHTML = `
     <div class="qbar"><button class="x" data-act="home" aria-label="やめる">×</button>
       <span class="pos">${round.i + 1} / ${round.ids.length}</span><span class="src">${esc(q.source)}</span></div>
-    <article class="q">
+    <article class="q${text ? '' : ' pic'}">
       ${text ? q.body.map(block).join('') : `<img class="orig" src="${esc(q.original)}" alt="問題（冊子の画像）">`}
       ${text && q.original ? `<details class="origbox"><summary>原本を見る</summary><img src="${esc(q.original)}" loading="lazy" alt="冊子の画像"></details>` : ''}
     </article>
