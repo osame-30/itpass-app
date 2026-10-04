@@ -87,6 +87,28 @@ pre, .html .code { overflow-x: auto; white-space: pre; font: 13px/1.5 ui-monospa
 .cleared { text-align: center; background: var(--ok); color: #fff; border-radius: 12px; padding: 8px; margin: 0 0 10px; font-weight: 700; animation: stamp .45s ease-out; }
 .exp { background: var(--accent-bg); border-radius: 14px; padding: 14px 16px; margin: 0 0 12px; animation: rise .25s ease-out; }
 .etext { margin: 0 0 6px; }
+.exp h3 small { font-weight: 400; color: var(--sub); margin-left: 6px; }
+.wnote { text-align: center; color: var(--sub); font-size: 14px; margin: -6px 0 10px; }
+.why { border-top: 1px solid var(--line); margin: 8px 0 6px; padding-top: 8px; }
+.why h4 { font-size: 14px; margin: 0 0 4px; }
+.why ul { list-style: none; margin: 0; padding: 0; }
+.why li { display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 8px; font-size: 15px; }
+.why li b { flex: none; color: var(--sub); }
+.why li.ok b { color: var(--ok); }
+.why li.pick { background: var(--card); }
+.why li.pick:not(.ok) b { color: var(--ng); }
+/* 用語: 点線の下線。タップで説明（.sheet） */
+.term { display: inline; padding: 0; margin: 0; border: 0; background: none; font: inherit; color: inherit; line-height: inherit;
+  text-decoration: underline dotted var(--accent); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.tchips { font-size: 14px; color: var(--sub); margin: 0 0 6px; }
+.tchips .term { margin: 0 10px 0 0; color: var(--text); }
+.full { color: var(--sub); font-size: 14px; margin: -4px 0 6px; }
+.sheet { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); display: flex; align-items: flex-end; justify-content: center; z-index: 10; animation: fade .15s ease-out; }
+.sheet .box { width: 100%; max-width: 640px; max-height: 80vh; overflow-y: auto; background: var(--card); border-radius: 16px 16px 0 0;
+  padding: 18px 16px calc(14px + env(safe-area-inset-bottom)); animation: rise .2s ease-out; }
+.sheet .box h3 { font-size: 20px; }
+.sheet a.btn { text-align: center; text-decoration: none; }
+.tcard .row .btn { flex: 1; text-align: center; text-decoration: none; color: var(--text); }
 .rlist { list-style: none; margin: 8px 0 0; padding: 0; }
 .rlist li { display: flex; gap: 8px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); font-size: 15px; }
 .rlist li.ok b { color: var(--ok); }
@@ -101,5 +123,6 @@ footer button { background: none; border: 0; color: var(--sub); text-decoration:
 @keyframes pop { 50% { transform: scale(1.04); } }
 @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 @keyframes stamp { from { transform: scale(1.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes fade { from { opacity: 0; } }
 @keyframes rise { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

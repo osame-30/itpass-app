@@ -32,8 +32,68 @@ function save() {
 function index(data) {
   const qs = data.questions;
   const ids = kind => qs.filter(q => q.set === kind).map(q => q.id);
+  const terms = data.terms || {};
   return { version: data.version, questions: qs, byId: Object.fromEntries(qs.map(q => [q.id, q])),   // 1回だけ出た論点も300問と同じ扱い
-           main: ids('300').concat(ids('once')), once: ids('once'), extra: ids('ai'), r08: ids('r08') };
+           main: ids('300').concat(ids('once')), once: ids('once'), extra: ids('ai'), r08: ids('r08'),
+           terms, findTerms: makeTermFinder(Object.keys(terms)) };
+}
+
+// ---------------------------------------------------------------- 用語（わからなかった単語）
+function termBtn(t, label = t) { return `<button type="button" class="term" data-act="term" data-arg="${esc(t)}">${esc(label)}</button>`; }
+
+// root の中の文字から用語を探してボタンにする。同じ語は1問につき1回だけ（used に記録）。
+function linkTerms(root, used) {
+  if (!root) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: n => (n.parentElement.closest('button, a, summary, .origbox, pre, .code') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  for (const node of nodes) {
+    const s = node.nodeValue;
+    const hits = DB.findTerms(s).filter(h => { if (used.has(h.t)) return false; used.add(h.t); return true; });
+    if (!hits.length) continue;
+    const span = document.createElement('span');
+    let i = 0, html = '';
+    for (const h of hits) { html += esc(s.slice(i, h.a)) + termBtn(h.t, h.s); i = h.b; }
+    span.innerHTML = html + esc(s.slice(i));
+    node.replaceWith(...span.childNodes);
+  }
+}
+
+function showTerm(t) {
+  const e = DB.terms[t];
+  if (!e) return;
+  const prev = st.terms[t];
+  st.terms[t] = { at: Date.now(), q: (round && round.ids[round.i]) || (prev && prev.q) || null };
+  save();
+  closeSheet();
+  const g = 'https://www.google.com/search?q=' + encodeURIComponent(t + ' とは');
+  document.body.insertAdjacentHTML('beforeend', `
+    <div class="sheet" id="sheet" data-act="sheetClose">
+      <section class="box" role="dialog" aria-label="${esc(t)}" data-act="noop">
+        <h3>${esc(t)}</h3>${e[0] ? `<p class="full">${esc(e[0])}</p>` : ''}
+        <p>${esc(e[1])}</p>
+        <a class="btn primary" href="${g}" target="_blank" rel="noopener">Googleで調べる</a>
+        <button type="button" class="btn" data-act="sheetClose">閉じる</button>
+        <p class="note">「わからなかった単語」に入れました。ホームから見返せます。</p>
+      </section>
+    </div>`);
+}
+
+function closeSheet() { const s = $('#sheet'); if (s) s.remove(); }
+
+function termList() {
+  round = null;
+  const items = Object.entries(st.terms).filter(([t]) => DB.terms[t]).sort((x, y) => y[1].at - x[1].at);
+  $('#v').innerHTML = `
+    <div class="qbar"><button class="x" data-act="home" aria-label="戻る">×</button><span>わからなかった単語（${items.length}）</span></div>
+    ${items.length ? items.map(([t]) => {
+      const e = DB.terms[t];
+      return `<section class="card tcard"><h3>${esc(t)}</h3>${e[0] ? `<p class="full">${esc(e[0])}</p>` : ''}<p>${esc(e[1])}</p>
+        <div class="row"><a class="btn" href="https://www.google.com/search?q=${encodeURIComponent(t + ' とは')}" target="_blank" rel="noopener">Googleで調べる</a>
+        <button class="btn" data-act="termDone" data-arg="${esc(t)}">覚えた</button></div></section>`;
+    }).join('') : '<p class="msg">まだありません。問題や解説の点線の語をタップすると，ここにたまります。</p>'}`;
+  window.scrollTo(0, 0);
 }
 
 function toast(msg) {
@@ -57,6 +117,7 @@ function home() {
   const wrongN = pickWrong(st, allIds(), Infinity).length;
   const aiNew = DB.extra.filter(id => status(st, id) === 'new').length;
   const onceNew = DB.once.filter(id => status(st, id) === 'new').length;
+  const termN = Object.keys(st.terms).filter(t => DB.terms[t]).length;
   $('#v').innerHTML = (t ? `
     <section class="card quota${day.cleared ? ' done' : ''}">
       <div class="qhead"><h2>今日のノルマ</h2>${day.cleared ? '<span class="clear">クリア</span>' : ''}</div>
@@ -86,6 +147,7 @@ function home() {
         <button class="btn" data-act="field" data-arg="T">テクノロジ</button>
       </div>
       <button data-act="wrong">間違えた問題<span>${wrongN}</span></button>
+      <button data-act="terms">わからなかった単語<span>${termN}</span></button>
       <button data-act="once">過去に1回だけ出た論点<span>未回答 ${onceNew}</span></button>
       <button data-act="ai">AI作成問題<span>未回答 ${aiNew}</span></button>
       <button data-act="r08">令和8年度（模試用）<span>${st.r08ok ? `続き 問${Math.min(st.r08, 100)}` : '鍵'}</span></button>
@@ -150,6 +212,8 @@ function showQ() {
   const q = DB.byId[round.ids[round.i]];
   const text = q.body !== null;
   const layout = !q.choices ? 'grid4' : q.choices.every(c => c.replace(/__/g, '').length <= 14) ? 'grid2' : 'list';
+  const perm = round.perm = choiceOrder(q, Math.random);
+  round.used = new Set();
   $('#v').innerHTML = `
     <div class="qbar"><button class="x" data-act="home" aria-label="やめる">×</button>
       <span class="pos">${round.i + 1} / ${round.ids.length}</span><span class="src">${esc(q.source)}</span></div>
@@ -158,37 +222,51 @@ function showQ() {
       ${text && q.original ? `<details class="origbox"><summary>原本を見る</summary><img src="${esc(q.original)}" loading="lazy" alt="冊子の画像"></details>` : ''}
     </article>
     <div class="choices ${layout}">${LETTERS.map((L, i) =>
-      `<button class="ch" data-act="choose" data-arg="${i}"><b>${L}</b>${q.choices ? `<span>${rich(q.choices[i])}</span>` : ''}</button>`).join('')}</div>
+      `<button class="ch" data-act="choose" data-arg="${i}"><b>${L}</b>${q.choices ? `<span>${rich(q.choices[perm[i]])}</span>` : ''}</button>`).join('')}</div>
     <div id="after"></div>`;
+  if (text) linkTerms($('.q'), round.used);
   window.scrollTo(0, 0);
 }
 
 function answer(i) {
   if (round.res.length > round.i) return;                                // 二度押し
   const q = DB.byId[round.ids[round.i]];
-  const ok = LETTERS[i] === q.answer;
-  const cleared = recordAnswer(st, q.id, LETTERS[i], ok, Date.now(), today(), remaining());
+  const perm = round.perm;                                               // 表示の位置 → 元の番号
+  const key = LETTERS.indexOf(q.answer);
+  const shown = LETTERS[perm.indexOf(key)];                              // 正解の，画面での記号
+  const ok = perm[i] === key;
+  const was = status(st, q.id);
+  const cleared = recordAnswer(st, q.id, LETTERS[perm[i]], ok, Date.now(), today(), remaining());
   if (round.mode === 'r08') st.r08 = q.no + 1;
   save();
   round.res.push({ id: q.id, ok });
   document.querySelectorAll('.ch').forEach((b, k) => {
     b.disabled = true;
     if (k === i) b.classList.add(ok ? 'ok' : 'ng');
-    if (LETTERS[k] === q.answer) b.classList.add('correct');
+    if (perm[k] === key) b.classList.add('correct');
   });
   if (navigator.vibrate) navigator.vibrate(ok ? 15 : [20, 40, 20]);
   const last = round.i + 1 === round.ids.length;
+  const wnote = !ok ? (was === 'wrong' ? '「間違えた問題」に残ります' : '「間違えた問題」に入れました')
+    : was === 'wrong' ? '「間違えた問題」から外しました' : '';
+  const why = q.why ? `<div class="why"><h4>選択肢ごとの結果</h4><ul>${LETTERS.map((L, k) =>
+    `<li class="${perm[k] === key ? 'ok' : ''}${k === i ? ' pick' : ''}"><b>${L}</b><span>${esc(remapLetters(q.why[perm[k]], perm))}</span></li>`).join('')}</ul></div>` : '';
   const after = $('#after');
   after.innerHTML = `
     <div class="mark ${ok ? 'ok' : 'ng'}">${ok ? '〇 正解' : '× 不正解'}</div>
+    ${wnote ? `<p class="wnote">${wnote}</p>` : ''}
     ${cleared ? '<div class="cleared">今日のノルマ クリア</div>' : ''}
     <section class="exp">
-      <h3>正解は ${q.answer}</h3>
-      <div class="etext">${q.exp}</div>
+      <h3>正解は ${shown}${shown !== q.answer && q.original ? `<small>（冊子では ${q.answer}）</small>` : ''}</h3>
+      <div class="etext">${remapLetters(q.exp, perm)}</div>
+      ${why}
       <p class="meta">${esc([FIELD_NAME[q.field], q.theme, q.topic].filter(Boolean).join(' ＞ '))}</p>
       <p class="meta">出典：${esc(q.source)}</p>
     </section>
     <button class="btn primary" data-act="next">${last ? '結果を見る' : '次の問題'}</button>`;
+  linkTerms($('#after .etext'), round.used);
+  const chips = (q.choices || []).flatMap(c => DB.findTerms(c).map(h => h.t)).filter((t, k, a) => !round.used.has(t) && a.indexOf(t) === k);
+  if (chips.length) $('#after .etext').insertAdjacentHTML('afterend', `<p class="tchips">選択肢の用語：${chips.map(t => termBtn(t)).join('')}</p>`);
   const top = after.getBoundingClientRect().top;
   if (top > innerHeight * 0.5) {
     const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -225,6 +303,9 @@ function about() {
       <p>問題文は、冊子の画像を文字に起こしたものです。2つのAIで点検していますが、誤りが残っているかもしれません。おかしいと思ったら「原本を見る」で冊子を確かめてください。文字に起こす前の問題は、冊子の画像のまま出しています。</p>
       <h2>おまかせに出る問題</h2>
       <p>合格特化300問（過去9回分で2回以上出た論点）と、過去に1回だけ出た論点の99問から先に出し、解き終えたら AI作成問題を出します。令和8年度は模試用に取ってあるので出しません。</p>
+      <h2>選択肢の並びと用語</h2>
+      <p>場所で答えを覚えてしまわないよう，選択肢の並びは毎回入れ替わります（令和8年度は冊子のままです）。解説の「ア」「イ」なども画面の記号に合わせています。</p>
+      <p>問題文や解説の点線の語をタップすると，その用語の説明が出て「わからなかった単語」に入ります。ホームから見返したり，Google で調べたりできます。</p>
       <h2>解説とAI作成問題</h2>
       <p>解説と「AI作成問題」は AI（Claude）が書いたもので、IPA の過去問題ではありません。誤りがあるかもしれません。</p>
       <h2>今日のノルマ</h2>
@@ -249,11 +330,17 @@ var ACTIONS = {
   r08yes: () => { st.r08ok = true; save(); startR08(); },
   again: () => (round.mode === 'r08' ? startR08() : ACTIONS[round.mode](round.arg)),
   choose: i => answer(Number(i)),
+  term: showTerm,
+  terms: termList,
+  termDone: t => { delete st.terms[t]; save(); termList(); },
+  sheetClose: closeSheet,
+  noop: () => {},
   next: nextQ,
   home: home,
   about: about,
 };
 
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]');
   if (b && !b.disabled) ACTIONS[b.dataset.act](b.dataset.arg);

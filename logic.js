@@ -19,7 +19,43 @@ function calcTarget(examDate, today, remaining) {
 }
 
 function newState() {
-  return { v: 1, examDate: null, ans: {}, day: null, r08: 1, r08ok: false };
+  return { v: 1, examDate: null, ans: {}, day: null, r08: 1, r08ok: false, terms: {} };
+}
+
+// 選択肢の並び（表示の位置 → 元の番号）。場所で答えを覚えないよう毎回入れ替える。
+// 令和8年度（模試として冊子の順で解く）と，選択肢が図の中にある問題は入れ替えない。
+function choiceOrder(q, rng) {
+  return q.choices && q.set !== 'r08' ? shuffled([0, 1, 2, 3], rng) : [0, 1, 2, 3];
+}
+
+// 解説の「ア は…」など元の記号を，表示している記号に置き換える。前後がカタカナのア〜エ（「ウェブ」など）は記号ではない。
+function remapLetters(text, perm) {
+  const L = 'アイウエ';
+  return text.replace(/(^|[^゠-ヿ])([アイウエ])(?![゠-ヿ])/g, (m, pre, c) => pre + L[perm.indexOf(L.indexOf(c))]);
+}
+
+// 用語を文中から探す関数を作る。長い語を先に試す。英数字の語とカタカナの語は，前後が同じ種類の文字なら別の語の一部とみなす。
+function makeTermFinder(keys) {
+  if (!keys.length) return () => [];
+  const asc = /[A-Za-z0-9]/, kana = /[ァ-ヺー]/;
+  const kind = ch => (asc.test(ch) ? asc : kana.test(ch) ? kana : null);
+  const tail = k => { const t = kind(k[k.length - 1]); return t === asc ? '(?![A-Za-z0-9])' : t === kana ? '(?![\\u30A1-\\u30FA\\u30FC])' : ''; };
+  // 英数字と日本語の境目には空白が入ることがある（解説は「SQL インジェクション」，問題文は「SQLインジェクション」）
+  const jp = ch => ch > '\x7f';
+  const pat = k => [...k].map((c, i) => (i && asc.test(c) !== asc.test(k[i - 1]) && (jp(c) || jp(k[i - 1])) ? ' ?' : '')
+    + c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('');
+  const canon = s => s.replace(/([A-Za-z0-9]) (?=[^\x00-\x7f])|([^\x00-\x7f]) (?=[A-Za-z0-9])/g, '$1$2');
+  const re = new RegExp(keys.slice().sort((a, b) => b.length - a.length).map(k => pat(k) + tail(k)).join('|'), 'g');
+  return s => {
+    const out = [];
+    re.lastIndex = 0;
+    for (let m; (m = re.exec(s));) {
+      const t = kind(m[0][0]);
+      if (m.index > 0 && t && t.test(s[m.index - 1])) { re.lastIndex = m.index + 1; continue; }   // 前が同じ種類の文字
+      out.push({ t: canon(m[0]), s: m[0], a: m.index, b: m.index + m[0].length });   // t は用語集の見出し，s は文中の書き方
+    }
+    return out;
+  };
 }
 
 function status(st, id) {
