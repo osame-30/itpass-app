@@ -19,7 +19,7 @@ function calcTarget(examDate, today, remaining) {
 }
 
 function newState() {
-  return { v: 1, examDate: null, ans: {}, day: null, r08: 1, r08ok: false, terms: {} };
+  return { v: 1, examDate: null, ans: {}, day: null, r08: 1, r08ok: false, terms: {}, anim: true };
 }
 
 // 選択肢の並び（表示の位置 → 元の番号）。場所で答えを覚えないよう毎回入れ替える。

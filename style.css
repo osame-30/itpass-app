@@ -115,6 +115,8 @@ pre, .html .code { overflow-x: auto; white-space: pre; font: 13px/1.5 ui-monospa
 .rlist li.ng b { color: var(--ng); }
 .rlist small { margin-left: auto; color: var(--sub); text-align: right; }
 .prose p { margin: 0 0 10px; }
+.check { display: flex; gap: 10px; align-items: center; margin: 0 0 6px; }
+.check input { width: 22px; height: 22px; margin: 0; }
 footer { text-align: center; margin: 18px 0 0; }
 footer button { background: none; border: 0; color: var(--sub); text-decoration: underline; font-size: 14px; }
 #toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); max-width: 90vw;
@@ -125,4 +127,5 @@ footer button { background: none; border: 0; color: var(--sub); text-decoration:
 @keyframes stamp { from { transform: scale(1.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes fade { from { opacity: 0; } }
 @keyframes rise { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+/* 動きは既定でオン（端末の「視差効果を減らす」では止めない）。このアプリについてで外すと html に .no-anim が付く */
+.no-anim *, .no-anim *::before, .no-anim *::after { animation: none !important; transition: none !important; }

@@ -22,7 +22,10 @@ function load() {
     const s = JSON.parse(localStorage.getItem(KEY));
     if (s && s.v === 1) st = Object.assign(newState(), s);
   } catch (e) { canSave = false; }
+  applyAnim();
 }
+
+function applyAnim() { document.documentElement.classList.toggle('no-anim', st.anim === false); }
 
 function save() {
   if (!canSave) return;
@@ -269,7 +272,7 @@ function answer(i) {
   if (chips.length) $('#after .etext').insertAdjacentHTML('afterend', `<p class="tchips">選択肢の用語：${chips.map(t => termBtn(t)).join('')}</p>`);
   const top = after.getBoundingClientRect().top;
   if (top > innerHeight * 0.5) {
-    const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const smooth = st.anim !== false;
     window.scrollBy({ top: top - innerHeight * 0.25, behavior: smooth ? 'smooth' : 'auto' });
   }
 }
@@ -303,6 +306,9 @@ function about() {
       <p>問題文は、冊子の画像を文字に起こしたものです。2つのAIで点検していますが、誤りが残っているかもしれません。おかしいと思ったら「原本を見る」で冊子を確かめてください。文字に起こす前の問題は、冊子の画像のまま出しています。</p>
       <h2>おまかせに出る問題</h2>
       <p>合格特化300問（過去9回分で2回以上出た論点）と、過去に1回だけ出た論点の99問から先に出し、解き終えたら AI作成問題を出します。令和8年度は模試用に取ってあるので出しません。</p>
+      <h2>動き（アニメーション）</h2>
+      <label class="check"><input type="checkbox" id="anim" data-act="anim"${st.anim !== false ? ' checked' : ''}>答えたときの動きを表示する</label>
+      <p class="sub">iPhone の「視差効果を減らす」などの設定にかかわらず表示します。動きが苦手なときは外してください。</p>
       <h2>選択肢の並びと用語</h2>
       <p>場所で答えを覚えてしまわないよう，選択肢の並びは毎回入れ替わります（令和8年度は冊子のままです）。解説の「ア」「イ」なども画面の記号に合わせています。</p>
       <p>問題文や解説の点線の語をタップすると，その用語の説明が出て「わからなかった単語」に入ります。ホームから見返したり，Google で調べたりできます。</p>
@@ -335,6 +341,7 @@ var ACTIONS = {
   termDone: t => { delete st.terms[t]; save(); termList(); },
   sheetClose: closeSheet,
   noop: () => {},
+  anim: () => { st.anim = $('#anim').checked; save(); applyAnim(); },
   next: nextQ,
   home: home,
   about: about,
